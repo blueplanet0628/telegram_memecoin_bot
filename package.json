@@ -1,0 +1,24 @@
+{
+  "name": "my-token-scraper",
+  "version": "1.0.0",
+  "description": "A project to scrape new tokens from DexTools",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "2captcha": "^3.0.5-2",
+    "axios": "^1.9.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^10.0.0",
+    "node-cron": "^3.0.3",
+    "node-telegram-bot-api": "^0.66.0",
+    "openai": "^4.96.0",
+    "puppeteer": "^19.11.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-anonymize-ua": "^2.4.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "telegraf": "^4.16.3",
+    "twitter-api-v2": "^1.22.0"
+  }
+}
