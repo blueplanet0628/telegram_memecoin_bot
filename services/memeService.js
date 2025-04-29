@@ -33,15 +33,15 @@ export const fetchLatestSolanaMemeCoins = async () => {
     if (solanaMemeCoins.length > 0) {
       for (const [index, coin] of solanaMemeCoins.entries()) {
         const message = `
-🚀 *New Solana Meme Coin Detected!*
-#${index + 1} - [View Token](${coin.url})
-*Name:* ${coin.name}
-*Description:* ${coin.description || 'No description available'}
-*24h Volume:* $${(coin.volume?.h24 || 0).toLocaleString()}
-*Market Cap:* $${(coin.fdv || coin.marketCap || 0).toLocaleString()}
-*Followers:* ${coin.socials?.twitter?.followers || 'N/A'}
-${coin.icon ? `🖼 Icon: ${coin.icon}` : ''}
---------------------------------------------`.trim();
+                    🚀 *New Solana Meme Coin Detected!*
+                    #${index + 1} - [View Token](${coin.url})
+                    *Name:* ${coin.name}
+                    *Description:* ${coin.description || 'No description available'}
+                    *24h Volume:* $${(coin.volume?.h24 || 0).toLocaleString()}
+                    *Market Cap:* $${(coin.fdv || coin.marketCap || 0).toLocaleString()}
+                    *Followers:* ${coin.socials?.twitter?.followers || 'N/A'}
+                    ${coin.icon ? `🖼 Icon: ${coin.icon}` : ''}
+                    --------------------------------------------`.trim();
 
         await sendTelegramMessage(message);
         newNotified.push(coin.tokenAddress.toLowerCase());
@@ -49,7 +49,7 @@ ${coin.icon ? `🖼 Icon: ${coin.icon}` : ''}
 
       saveNotifiedTokens({ notified: newNotified });
     } else {
-      const noResultMessage = "🚫 No new Solana meme coins matched the criteria in the last 5 minutes.";
+      const noResultMessage = "🚫 No new Solana meme coins matched the criteria in the last 30 seconds.";
       console.log(noResultMessage);
       await sendTelegramMessage(noResultMessage);
     }
