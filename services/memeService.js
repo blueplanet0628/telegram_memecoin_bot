@@ -17,19 +17,12 @@ export async function fetchSolanaMemecoins() {
       );
     });
 
-    const notified = await getNotifiedTokens(); // Ensure this is async
+    const notified = (await getNotifiedTokens())?.map(addr => addr.toLowerCase()) || [];
     const newNotified = [];
-
-    if (solanaMemecoins.length === 0) {
-      const noResultMessage = "🚫 No new Solana meme coins matched the criteria.";
-      console.log(noResultMessage);
-      await sendTelegramMessage(noResultMessage);
-      return;
-    }
 
     for (const [index, token] of solanaMemecoins.entries()) {
       const address = token.baseToken?.address?.toLowerCase();
-      if (notified.includes(address)) continue;
+      if (!address || notified.includes(address)) continue;
 
       const coin = {
         name: token.baseToken?.name || 'Unknown',
@@ -57,14 +50,17 @@ export async function fetchSolanaMemecoins() {
 📜 *Contract:* \`${coin.address}\`
 ${coin.icon ? `🖼 *Icon:* ${coin.icon}` : ''}
 📣 *X (Twitter):* N/A
-      `.trim();
+`.trim();
 
       await sendTelegramMessage(message);
       newNotified.push(address);
     }
 
     if (newNotified.length > 0) {
-      await saveNotifiedTokens({ notified: [...notified, ...newNotified] });
+      await saveNotifiedTokens({ notified: [...new Set([...notified, ...newNotified])] });
+    } else {
+      sendTelegramMessage('🔔 *No new memecoins detected.*');
+      console.log('✅ No new meme coins to notify.');
     }
 
   } catch (err) {
