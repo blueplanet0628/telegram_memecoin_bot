@@ -1,61 +1,73 @@
 import axios from 'axios';
 import { memeKeywords } from '../data/keywords.js';
-import { sendTelegramMessage } from '../services/telegramService.js';
-import { loadNotifiedTokens, saveNotifiedTokens } from '../utils/storage.js';
+import { getNotifiedTokens, saveNotifiedTokens } from '../utils/storage.js';
+import { sendTelegramMessage } from './telegramService.js';
 
-export const fetchLatestSolanaMemeCoins = async () => {
+export async function fetchSolanaMemecoins() {
   try {
-    const response = await axios.get('https://api.dexscreener.com/token-profiles/latest/v1');
-    const tokens = response.data || [];
+    const response = await axios.get('https://api.dexscreener.com/latest/dex/search?q=SOL/USDC');
+    const allTokens = response.data?.pairs || [];
 
-    const { notified } = loadNotifiedTokens();
-    const newNotified = [...notified];
-
-    const solanaMemeCoins = tokens.filter(token => {
-      const isSolana = token.chainId === 'solana';
-      const isListedInLastHour = Date.now() - new Date(token.listingTimestamp).getTime() < 3600 * 1000;
-      const hasMinFollowers = token.socials?.twitter?.followers >= 100;
-
-      const name = token.name?.toLowerCase() || '';
-      const desc = token.description?.toLowerCase() || '';
-      const url = token.url?.toLowerCase() || '';
-      const address = token.tokenAddress?.toLowerCase() || '';
-
-      const isMeme = memeKeywords.some(keyword =>
-        name.includes(keyword) || desc.includes(keyword) || url.includes(keyword) || address.includes(keyword)
+    const solanaMemecoins = allTokens.filter(token => {
+      const chain = token.chainId?.toLowerCase();
+      const name = token.baseToken?.name?.toLowerCase() || '';
+      const symbol = token.baseToken?.symbol?.toLowerCase() || '';
+      return chain === 'solana' && memeKeywords.some(keyword =>
+        name.includes(keyword) || symbol.includes(keyword)
       );
-
-      const isAlreadyNotified = notified.includes(address);
-
-      return isSolana && isListedInLastHour && hasMinFollowers && isMeme && !isAlreadyNotified;
     });
 
-    if (solanaMemeCoins.length > 0) {
-      for (const [index, coin] of solanaMemeCoins.entries()) {
-        const message = `
-                    🚀 *New Solana Meme Coin Detected!*
-                    #${index + 1} - [View Token](${coin.url})
-                    *Name:* ${coin.name}
-                    *Description:* ${coin.description || 'No description available'}
-                    *24h Volume:* $${(coin.volume?.h24 || 0).toLocaleString()}
-                    *Market Cap:* $${(coin.fdv || coin.marketCap || 0).toLocaleString()}
-                    *Followers:* ${coin.socials?.twitter?.followers || 'N/A'}
-                    ${coin.icon ? `🖼 Icon: ${coin.icon}` : ''}
-                    --------------------------------------------`.trim();
+    const notified = await getNotifiedTokens(); // Ensure this is async
+    const newNotified = [];
 
-        await sendTelegramMessage(message);
-        newNotified.push(coin.tokenAddress.toLowerCase());
-      }
-
-      saveNotifiedTokens({ notified: newNotified });
-    } else {
-      const noResultMessage = "🚫 No new Solana meme coins matched the criteria in the last 30 seconds.";
+    if (solanaMemecoins.length === 0) {
+      const noResultMessage = "🚫 No new Solana meme coins matched the criteria.";
       console.log(noResultMessage);
       await sendTelegramMessage(noResultMessage);
+      return;
     }
 
-  } catch (error) {
-    console.error('❌ Error fetching Solana meme coins:', error.message);
-    await sendTelegramMessage(`❌ Error occurred while fetching data: ${error.message}`);
+    for (const [index, token] of solanaMemecoins.entries()) {
+      const address = token.baseToken?.address?.toLowerCase();
+      if (notified.includes(address)) continue;
+
+      const coin = {
+        name: token.baseToken?.name || 'Unknown',
+        symbol: token.baseToken?.symbol || '???',
+        address,
+        url: `https://dexscreener.com/solana/${token.pairAddress}`,
+        icon: token.info?.imageUrl || '',
+        description: 'No description available',
+        fdv: token.fdv,
+        marketCap: token.marketCap,
+        volume: token.volume?.h24 || 0,
+        exchange: token.dexId || 'Unknown DEX',
+        tradeUrl: token.url || `https://dexscreener.com/solana/${token.pairAddress}`,
+      };
+
+      const message = `
+🚀 *New Solana Meme Coin Detected!*
+
+#${index + 1} - [View Token](${coin.url})
+*Name:* ${coin.name} (${coin.symbol})
+*Market Cap:* $${(coin.fdv || coin.marketCap || 0).toLocaleString()}
+*Volume (24h):* $${Number(coin.volume).toLocaleString()}
+*Exchange:* ${coin.exchange}
+🔗 [Trade Now](${coin.tradeUrl})
+📜 *Contract:* \`${coin.address}\`
+${coin.icon ? `🖼 *Icon:* ${coin.icon}` : ''}
+📣 *X (Twitter):* N/A
+      `.trim();
+
+      await sendTelegramMessage(message);
+      newNotified.push(address);
+    }
+
+    if (newNotified.length > 0) {
+      await saveNotifiedTokens({ notified: [...notified, ...newNotified] });
+    }
+
+  } catch (err) {
+    console.error('Error in fetchSolanaMemecoins:', err.message);
   }
-};
+}

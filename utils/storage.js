@@ -1,21 +1,28 @@
 import fs from 'fs';
-const filePath = '../data/notifiedTokens.json';
+import path from 'path';
 
-export const loadNotifiedTokens = () => {
+const filePath = path.resolve('data/notifiedTokens.json');
+
+export function getNotifiedTokens() {
   try {
-    if (!fs.existsSync(filePath)) return { notified: [] };
-    const data = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(data);
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, '[]');  // Create file if not exists
+    }
+
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(content);
+
+    return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.error('Error reading notifiedTokens.json:', err.message);
-    return { notified: [] };
+    return [];  // Return empty array on error
   }
-};
+}
 
-export const saveNotifiedTokens = (data) => {
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  } catch (err) {
-    console.error('Error writing notifiedTokens.json:', err.message);
+export function saveNotifiedTokens(address) {
+  const tokens = getNotifiedTokens();
+  if (!tokens.includes(address)) {
+    tokens.push(address);
+    fs.writeFileSync(filePath, JSON.stringify(tokens, null, 2));
   }
-};
+}
